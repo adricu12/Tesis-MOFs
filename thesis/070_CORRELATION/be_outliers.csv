@@ -1,0 +1,6 @@
+host,host_full,guest,minBE_kcal_mol,typical_range_min,typical_range_max,magnitude_ratio_vs_typical,likely_mechanism
+scu,NU-902,BZA,-254.8,-97,-34,3.6,GFN1-xTB fragment misassignment (proton transfer) at compressed/MD-sourced geometry
+sqc,PCN-225,BZA,-195.5,-97,-34,2.8,GFN1-xTB fragment misassignment (proton transfer) at compressed/MD-sourced geometry
+sqc,PCN-225,CPFX,-188.4,-97,-34,2.7,GFN1-xTB fragment misassignment (proton transfer) at compressed/MD-sourced geometry
+sqc,PCN-225,KETO,-248.2,-97,-34,3.5,GFN1-xTB fragment misassignment (proton transfer) at compressed/MD-sourced geometry
+scu,NU-902,OXP,-133.9,-97,-34,1.9,GFN1-xTB fragment misassignment (proton transfer) at compressed/MD-sourced geometry

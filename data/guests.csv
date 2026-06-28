@@ -1,0 +1,38 @@
+Name,Abbreviation,CID,Guest_Type
+Diclofenac,DIC,3033,Pharmaceutical
+Ibuprofen,IBU,3672,Pharmaceutical
+Carbamazepine,CAR,2554,Pharmaceutical
+Sulfamethoxazole,SXT,5329,Pharmaceutical
+Naproxen,NAP,156391,Pharmaceutical
+Trimethoprim,TMP,5578,Pharmaceutical
+Acetaminophen,AC,1983,Pharmaceutical
+Gemfibrozil,GFB,3463,Pharmaceutical
+Sulfamethazine,SMZ,5327,Pharmaceutical
+Bezafibrate,BZA,39042,Pharmaceutical
+Ciprofloxacin,CPFX,2764,Pharmaceutical
+Atenolol,AT,2249,Pharmaceutical
+Estrone,E1,5870,Pharmaceutical
+Ketoprofen,KETO,3825,Pharmaceutical
+Triclosan,TCS,5564,Pharmaceutical
+17-beta-Estradiol,E2,5757,Pharmaceutical
+17-alpha-Ethinylestradiol,EE2,57495718,Pharmaceutical
+Sulfadiazine,SSD,5215,Pharmaceutical
+Clofibric-acid,CLF,2797,Pharmaceutical
+Oxypurinol,OXP,135398752,Pharmaceutical
+Cannabichromene,CBC,30219,Cannabinoid
+Cannabichromenic acid,CBCA,3084339,Cannabinoid
+Cannabidiol,CBD,644019,Cannabinoid
+Cannabidiolic acid,CBDA,160570,Cannabinoid
+Cannabidivarin,CBDV,11601669,Cannabinoid
+Cannabidivarinic acid,CBDVA,59444387,Cannabinoid
+Cannabigerol,CBG,5315659,Cannabinoid
+Cannabigerolic acid,CBGA,6449999,Cannabinoid
+Cannabicyclol,CBL,59444380,Cannabinoid
+Cannabicyclolic acid,CBLA,71437560,Cannabinoid
+Cannabinol,CBN,2543,Cannabinoid
+Cannabinolic acid,CBNA,3081990,Cannabinoid
+Delta-8-Tetrahydrocannabinol,d8-THC,638026,Cannabinoid
+Delta-9-Tetrahydrocannabinol,d9-THC,16078,Cannabinoid
+Tetrahydrocannabinolic acid,THCA,3082459,Cannabinoid
+Tetrahydrocannabivarin,THCV,93147,Cannabinoid
+Tetrahydrocannabivarinic acid,THCVA,59444416,Cannabinoid

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guest Molecule 3D Viewer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.3/3Dmol-min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2rem 1rem;
+    min-height: 100vh;
+  }
+  .viewer-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    width: 100%;
+    max-width: 680px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  .viewer-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .mol-info { flex: 1; min-width: 0; }
+  .mol-name {
+    font-size: 16px; font-weight: 500; color: #111;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mol-meta { font-size: 12px; color: #777; margin-top: 3px; }
+  .type-badge {
+    font-size: 11px; font-weight: 500; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap; flex-shrink: 0;
+  }
+  .type-pharma { background: #e6f1fb; color: #0c447c; }
+  .type-canna  { background: #eaf3de; color: #27500a; }
+  #viewer-container {
+    width: 100%; height: 360px;
+    background: #f0f0f0; position: relative;
+  }
+  #mol-viewer { width: 100%; height: 100%; }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: #f0f0f0; z-index: 10;
+    font-size: 13px; color: #888; gap: 8px;
+  }
+  .viewer-footer {
+    padding: 10px 18px;
+    border-top: 1px solid #e0e0e0;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .nav-controls { display: flex; align-items: center; gap: 8px; }
+  .nav-btn {
+    width: 34px; height: 34px; border-radius: 8px;
+    border: 1px solid #ccc; background: transparent;
+    cursor: pointer; font-size: 16px; color: #333;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .nav-btn:hover:not(:disabled) { background: #f0f0f0; }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .counter { font-size: 13px; color: #777; min-width: 52px; text-align: center; }
+  .style-controls { display: flex; gap: 6px; }
+  .style-btn {
+    font-size: 11px; padding: 5px 11px; border-radius: 6px;
+    border: 1px solid #ccc; background: transparent;
+    cursor: pointer; color: #555; transition: all 0.15s;
+  }
+  .style-btn.active {
+    background: #e6f1fb; color: #185fa5; border-color: #85b7eb;
+  }
+  .cid-link { font-size: 11px; color: #185fa5; text-decoration: none; }
+  .cid-link:hover { text-decoration: underline; }
+  .note {
+    padding: 8px 18px;
+    border-top: 1px solid #e0e0e0;
+    font-size: 11px; color: #999; background: #fafafa;
+  }
+</style>
+</head>
+<body>
+<div class="viewer-card">
+  <div class="viewer-header">
+    <div class="mol-info">
+      <div class="mol-name" id="mol-name">Loading...</div>
+      <div class="mol-meta" id="mol-meta"></div>
+    </div>
+    <span class="type-badge" id="type-badge"></span>
+  </div>
+
+  <div id="viewer-container">
+    <div class="overlay" id="loading-overlay">Loading structure...</div>
+    <div class="overlay" id="error-overlay" style="display:none">
+      <span>Could not load structure file.</span>
+      <a id="pubchem-fallback" href="#" target="_blank" class="cid-link">View on PubChem &#8599;</a>
+    </div>
+    <div id="mol-viewer"></div>
+  </div>
+
+  <div class="viewer-footer">
+    <div class="nav-controls">
+      <button class="nav-btn" id="btn-prev" title="Previous">&#8592;</button>
+      <span class="counter" id="counter">1 / 37</span>
+      <button class="nav-btn" id="btn-next" title="Next">&#8594;</button>
+    </div>
+    <div class="style-controls">
+      <button class="style-btn active" id="style-stick"   onclick="setStyle('stick')">Stick</button>
+      <button class="style-btn"        id="style-sphere"  onclick="setStyle('sphere')">Sphere</button>
+      <button class="style-btn"        id="style-surface" onclick="setStyle('surface')">Surface</button>
+    </div>
+    <a id="cid-link" class="cid-link" href="#" target="_blank">PubChem</a>
+  </div>
+
+  <div class="note">
+    Geometries are GFN1-xTB/D3(BJ) optimized structures. Rendering via 3Dmol.js. Drag to rotate &middot; scroll to zoom.
+  </div>
+</div>
+
+<script>
+const molecules = [
+  {name:"Diclofenac",         abbr:"DIC",     cid:3033,       type:"pharma", file:"diclofenac.xyz"},
+  {name:"Ibuprofen",          abbr:"IBU",     cid:3672,       type:"pharma", file:"ibuprofen.xyz"},
+  {name:"Carbamazepine",      abbr:"CAR",     cid:2554,       type:"pharma", file:"carbamazepine.xyz"},
+  {name:"Sulfamethoxazole",   abbr:"SXT",     cid:5329,       type:"pharma", file:"sulfamethoxazole.xyz"},
+  {name:"Naproxen",           abbr:"NAP",     cid:156391,     type:"pharma", file:"naproxen.xyz"},
+  {name:"Trimethoprim",       abbr:"TMP",     cid:5578,       type:"pharma", file:"trimethoprim.xyz"},
+  {name:"Acetaminophen",      abbr:"AC",      cid:1983,       type:"pharma", file:"acetaminophen.xyz"},
+  {name:"Gemfibrozil",        abbr:"GFB",     cid:3463,       type:"pharma", file:"gemfibrozil.xyz"},
+  {name:"Sulfamethazine",     abbr:"SMZ",     cid:5327,       type:"pharma", file:"sulfamethazine.xyz"},
+  {name:"Bezafibrate",        abbr:"BZA",     cid:39042,      type:"pharma", file:"bezafibrate.xyz"},
+  {name:"Ciprofloxacin",      abbr:"CPFX",    cid:2764,       type:"pharma", file:"ciprofloxacin.xyz"},
+  {name:"Atenolol",           abbr:"AT",      cid:2249,       type:"pharma", file:"atenolol.xyz"},
+  {name:"Estrone",            abbr:"E1",      cid:5870,       type:"pharma", file:"estrone.xyz"},
+  {name:"Ketoprofen",         abbr:"KETO",    cid:3825,       type:"pharma", file:"ketoprofen.xyz"},
+  {name:"Triclosan",          abbr:"TCS",     cid:5564,       type:"pharma", file:"triclosan.xyz"},
+  {name:"17\u03B2-Estradiol",         abbr:"E2",      cid:5757,       type:"pharma", file:"17-beta-estradiol.xyz"},
+  {name:"17\u03B1-Ethinylestradiol",  abbr:"EE2",     cid:57495718,   type:"pharma", file:"17-alpha-ethinylestradiol.xyz"},
+  {name:"Sulfadiazine",       abbr:"SSD",     cid:5215,       type:"pharma", file:"sulfadiazine.xyz"},
+  {name:"Clofibric acid",     abbr:"CLF",     cid:2797,       type:"pharma", file:"clofibric-acid.xyz"},
+  {name:"Oxypurinol",         abbr:"OXP",     cid:135398752,  type:"pharma", file:"oxypurinol.xyz"},
+  {name:"Cannabichromene",          abbr:"CBC",   cid:30219,    type:"canna", file:"CBC.xyz"},
+  {name:"Cannabichromenic acid",    abbr:"CBCA",  cid:3084339,  type:"canna", file:"CBCA.xyz"},
+  {name:"Cannabidiol",              abbr:"CBD",   cid:644019,   type:"canna", file:"CBD.xyz"},
+  {name:"Cannabidiolic acid",       abbr:"CBDA",  cid:160570,   type:"canna", file:"CBDA.xyz"},
+  {name:"Cannabidivarin",           abbr:"CBDV",  cid:11601669, type:"canna", file:"CBDV.xyz"},
+  {name:"Cannabidivarinic acid",    abbr:"CBDVA", cid:59444387, type:"canna", file:"CBDVA.xyz"},
+  {name:"Cannabigerol",             abbr:"CBG",   cid:5315659,  type:"canna", file:"CBG.xyz"},
+  {name:"Cannabigerolic acid",      abbr:"CBGA",  cid:6449999,  type:"canna", file:"CBGA.xyz"},
+  {name:"Cannabicyclol",            abbr:"CBL",   cid:59444380, type:"canna", file:"CBL.xyz"},
+  {name:"Cannabicyclolic acid",     abbr:"CBLA",  cid:71437560, type:"canna", file:"CBLA.xyz"},
+  {name:"Cannabinol",               abbr:"CBN",   cid:2543,     type:"canna", file:"CBN.xyz"},
+  {name:"Cannabinolic acid",        abbr:"CBNA",  cid:3081990,  type:"canna", file:"CBNA.xyz"},
+  {name:"\u03948-Tetrahydrocannabinol",      abbr:"8d-THC", cid:638026,   type:"canna", file:"d8-THC.xyz"},
+  {name:"\u03949-Tetrahydrocannabinol",      abbr:"d9-THC", cid:16078,    type:"canna", file:"d9-THC.xyz"},
+  {name:"Tetrahydrocannabinolic acid",  abbr:"THCA",  cid:3082459,  type:"canna", file:"THCA.xyz"},
+  {name:"Tetrahydrocannabivarin",       abbr:"THCV",  cid:93147,    type:"canna", file:"THCV.xyz"},
+  {name:"Tetrahydrocannabivarinic acid",abbr:"THCVA", cid:59444416, type:"canna", file:"THCVA.xyz"}
+];
+
+const BASE_PATH = "./structures_geo-opt/guests/";
+
+let current = 0;
+let viewer  = null;
+let currentStyle = 'stick';
+const xyzCache = {};
+
+function initViewer() {
+  viewer = $3Dmol.createViewer(document.getElementById('mol-viewer'), {
+    backgroundColor: '#f0f0f0',
+    antialias: true
+  });
+}
+
+function applyStyle() {
+  if (!viewer) return;
+  if (currentStyle === 'stick') {
+    viewer.setStyle({}, {
+      stick:  {colorscheme: 'Jmol', radius: 0.15},
+      sphere: {colorscheme: 'Jmol', scale: 0.25}
+    });
+  } else if (currentStyle === 'sphere') {
+    viewer.setStyle({}, {sphere: {colorscheme: 'Jmol', scale: 0.4}});
+  } else if (currentStyle === 'surface') {
+    viewer.setStyle({}, {stick: {colorscheme: 'Jmol', radius: 0.12}});
+    viewer.addSurface($3Dmol.SurfaceType.VDW, {opacity: 0.55, colorscheme: 'Jmol'});
+  }
+  viewer.zoomTo();
+  viewer.render();
+}
+
+function renderXyz(xyzData) {
+  viewer.removeAllModels();
+  viewer.removeAllSurfaces();
+  viewer.addModel(xyzData, 'xyz');
+  applyStyle();
+  viewer.spin(true);
+}
+
+function setStyle(s) {
+  currentStyle = s;
+  document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('style-' + s).classList.add('active');
+  const mol = molecules[current];
+  if (xyzCache[mol.file]) {
+    viewer.removeAllModels();
+    viewer.removeAllSurfaces();
+    viewer.addModel(xyzCache[mol.file], 'xyz');
+    applyStyle();
+  }
+}
+
+function updateUI(idx) {
+  const mol = molecules[idx];
+  document.getElementById('mol-name').textContent = mol.name + ' (' + mol.abbr + ')';
+  document.getElementById('mol-meta').textContent = 'PubChem CID: ' + mol.cid + '\u2002\u00B7\u2002GFN1-xTB/D3(BJ) optimized';
+  const badge = document.getElementById('type-badge');
+  badge.textContent    = mol.type === 'pharma' ? 'Pharmaceutical' : 'Cannabinoid';
+  badge.className      = 'type-badge ' + (mol.type === 'pharma' ? 'type-pharma' : 'type-canna');
+  document.getElementById('cid-link').href        = 'https://pubchem.ncbi.nlm.nih.gov/compound/' + mol.cid;
+  document.getElementById('cid-link').textContent = 'PubChem CID ' + mol.cid;
+  document.getElementById('pubchem-fallback').href = 'https://pubchem.ncbi.nlm.nih.gov/compound/' + mol.cid;
+  document.getElementById('counter').textContent  = (idx + 1) + ' / ' + molecules.length;
+  document.getElementById('btn-prev').disabled    = idx === 0;
+  document.getElementById('btn-next').disabled    = idx === molecules.length - 1;
+}
+
+async function loadMolecule(idx) {
+  const mol = molecules[idx];
+  updateUI(idx);
+
+  if (xyzCache[mol.file]) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('error-overlay').style.display   = 'none';
+    renderXyz(xyzCache[mol.file]);
+    return;
+  }
+
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('error-overlay').style.display   = 'none';
+  if (viewer) { viewer.removeAllModels(); viewer.render(); }
+
+  try {
+    const res = await fetch(BASE_PATH + mol.file);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const xyz = await res.text();
+    if (!xyz || xyz.trim().length < 5) throw new Error('Empty file');
+    xyzCache[mol.file] = xyz;
+    document.getElementById('loading-overlay').style.display = 'none';
+    renderXyz(xyz);
+  } catch(e) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('error-overlay').style.display   = 'flex';
+  }
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (current > 0) { current--; loadMolecule(current); }
+});
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (current < molecules.length - 1) { current++; loadMolecule(current); }
+});
+
+window.setStyle = setStyle;
+
+window.addEventListener('load', () => {
+  initViewer();
+  loadMolecule(0);
+});
+</script>
+</body>
+</html>

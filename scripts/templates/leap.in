@@ -1,0 +1,6 @@
+source leaprc.gaff2
+loadAmberParams <file_name>.frcmod
+MOL = loadMol2 <file_name>_leap.mol2
+check MOL
+saveAmberParm MOL <file_name>.top <file_name>.crd
+quit

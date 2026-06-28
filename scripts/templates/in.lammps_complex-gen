@@ -1,0 +1,115 @@
+# --- HOST-NAME host + GUEST guest : merge & clash check ---
+log             log.HOST-NAME_GUEST_complex_generation_mi
+units           real
+atom_style      full
+boundary        p p p
+newton          on
+
+# One pair style for all; LB mixing; (define PPPM *after* reads)
+pair_style      lj/cut/coul/long 12.0
+pair_modify     mix arithmetic
+special_bonds   amber
+
+# Bonded styles cover MOF (fourier, cosine/periodic) + GAFF2 guest (harmonic)
+bond_style      harmonic
+angle_style     hybrid fourier cosine/periodic harmonic
+dihedral_style  harmonic
+improper_style  fourier
+
+neighbor        2.0 bin
+neigh_modify    delay 0 every 1 check yes
+
+# 1) Host FIRST — reserve room for added *types* and per-atom topologies
+read_data  ../../MOF-DATA  extra/atom/types AT  extra/bond/types BT  extra/angle/types AnT  extra/dihedral/types DT  extra/improper/types IT  extra/bond/per/atom BA  extra/angle/per/atom AA  extra/dihedral/per/atom DA  extra/improper/per/atom IA
+read_data  ../data.GUEST_centered add append offset MOF_A MOF_B MOF_C MOF_D MOF_E group guest
+group      mof subtract all guest
+group      mobile union guest
+
+# 2.5) NOW create PPPM (triclinic box is final), then init it
+kspace_style  pppm 1.0e-4
+run           0
+
+# Sanity: list which coeffs are set (debug if needed)
+info coeffs   # will point out any missing pair/bond/angle/... coeffs
+
+# -------- Freeze the MOF (host) completely ----------
+# Zero its forces and velocities so only the guest can relax/move.
+fix            holdMOF  mof setforce 0.0 0.0 0.0         # freeze MOF atoms 
+velocity       mof set 0.0 0.0 0.0
+
+# — before minimization — check for clashes in initial placement
+run 0     # ensure system is fully initialized (images, neighbor lists etc.)
+write_dump all custom initial_before_min.lammpstrj id type x y z ix iy iz
+write_data data.initial_before_min
+
+# -------- Minimization: relax ONLY the guest with MOF frozen ----------
+min_style      cg                              # conjugate-gradient 
+minimize       1.0e-6 1.0e-8 5000 20000        # tolerances
+run            0                               # barrier; keeps state consistent
+
+# Change log for equilibration
+log            log.HOST-NAME_GUEST_complex_generation_equ
+
+# -------- Thermo reporting focused on the guest ----------
+compute        Tguest guest temp               # temperature for guest group
+compute        Tglobal all temp                # global temperature
+compute        p all pressure thermo_temp      # pressure using thermo temp  
+thermo_style   custom step temp c_Tguest pe etotal press vol enthalpy
+thermo         100
+thermo_modify  temp Tglobal                    # global T in thermo printout 
+
+# -------- Initialization of guest velocities ----------
+variable       T_equ equal TEST_TEMP                # K for equilibration
+variable       T_prod equal TEST_TEMP               # K for production  
+variable       Tdamp equal 100.0                # fs 
+timestep       1.0                              # fs 
+velocity       guest create ${T_equ} RAND_VEL mom yes rot yes dist gaussian  
+fix            zerodrift_equ guest momentum 100 linear 1 1 1                # remove COM drift periodically 
+
+# -------- NVT equilibration of the guest ONLY ----------
+fix            thermostat_equ guest nvt temp ${T_equ} ${T_equ} ${Tdamp}             # NH NVT uses group’s temp compute 
+
+# Dumps for Python
+dump           eq_all all custom 1000 HOST-NAME_GUEST_complex_generation_eq.lammpstrj id mol type q x y z ix iy iz
+dump_modify    eq_all sort id                                         # stable ordering for analysis
+
+variable       Neq equal 100000        # 100 ps at 1 fs
+run            ${Neq}
+
+# Clean up equilibration fixes
+unfix          thermostat_equ
+unfix          zerodrift_equ
+undump         eq_all
+
+# — before production — dump a snapshot to check config before dynamics
+run 0
+write_dump all custom before_prod.lammpstrj id type x y z ix iy iz
+write_data before_prod.data
+
+# -------- Production: guest explores MOF under NVE ----------
+log            log.HOST-NAME_GUEST_complex_generation_pro
+
+# Switch to 0.25 fs for production
+variable       dt equal 0.25          # fs
+timestep       ${dt}
+
+# Choose total production time (ns). Set 10.0 (default) or 8.0 for 8 ns.
+variable       runtime_ns equal 2.0  
+
+# Convert ns -> steps: 1 ns = 1e6 fs ; Nsteps = (runtime_ns * 1e6 fs) / dt(fs)
+variable       Npr equal ceil(v_runtime_ns*1.0e6/v_dt)
+fix            integrate guest nve                       # microcanonical integrator
+
+# Dumps (adjust stride to manage file size; 10000 steps = 2.5 ps at 0.25 fs)
+dump           pr_all all custom 10000 HOST-NAME_GUEST_nve.lammpstrj id mol type q x y z ix iy iz
+dump_modify    pr_all sort id
+
+thermo_style   custom step temp c_Tguest pe etotal press vol enthalpy
+thermo         10000
+thermo_modify  temp Tglobal
+
+run            ${Npr}
+unfix          integrate
+
+# Write final restart (fix typo: "write_restart")
+write_restart  HOST-NAME_GUEST_complex_generation_pr.rst

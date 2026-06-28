@@ -1,0 +1,11 @@
+set,,mean_rho,sign_consistent,n_sig_hosts
+pharmaceutical,NumRotatableBonds,-0.29,True,1
+pharmaceutical,NumHAcceptors,-0.29,True,0
+pharmaceutical,NumHDonors,-0.28,True,0
+pharmaceutical,MolWt,-0.18,False,0
+pharmaceutical,NumAromaticRings,-0.0,False,1
+cannabinoid,NumHAcceptors,-0.7,True,3
+cannabinoid,NumHDonors,-0.63,True,3
+cannabinoid,MolWt,-0.57,True,3
+cannabinoid,NumRotatableBonds,-0.34,False,1
+cannabinoid,NumAromaticRings,0.06,False,0

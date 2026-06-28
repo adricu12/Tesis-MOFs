@@ -1,0 +1,25 @@
+#!/bin/sh
+
+JOBNAME="job-id"
+export AMS_JOBNAME="$JOBNAME"
+
+$AMSBIN/ams << eor
+
+Task SinglePoint
+
+System
+    Atoms
+<atoms_coords>
+    End
+
+    Lattice
+<lattice_vectors>
+    End
+End
+
+Engine DFTB
+   Model GFN1-xTB
+   DispersionCorrection D3-BJ
+EndEngine
+
+eor

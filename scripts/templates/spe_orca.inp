@@ -1,0 +1,12 @@
+! HF 6-31G(d) TightSCF KeepDens
+
+%pal nprocs 1 end
+
+%geom
+  MaxIter 200
+  MaxStep 0.1
+end
+
+* xyz 0 1 
+<atoms_coords>
+*
